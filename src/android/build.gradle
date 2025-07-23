@@ -28,7 +28,6 @@ if (!useAndroidX) {
 def libDir = "${projectDir}/libs"
 
 File capacitorConfig = new File("${projectDir}/../../capacitor.config.json")
-
 if (!capacitorConfig.exists()) {
   // Capacitor V3?
   capacitorConfig = new File("${projectDir}/../../capacitor.config.ts")
@@ -50,7 +49,6 @@ if (capacitorConfig.exists()) {
 
   // Determine which version of background-geolocation (public or private) by stat folder
   File pluginFolder = new File("${libDir}/${CORDOVA_BACKGROUND_GEOLOCATION}")
-
   if (pluginFolder.exists() && pluginFolder.isDirectory()) {
     pluginName = CORDOVA_BACKGROUND_GEOLOCATION
   } else {
@@ -85,7 +83,6 @@ if (capacitorConfig.exists()) {
     }
   } else {
     println("* ERROR: cordova-background-geolocation failed to find plugin config from package.json")
-
   }
 
   // Capacitor does not have the scope here to use android.applicationVariants.
@@ -97,8 +94,15 @@ if (capacitorConfig.exists()) {
   })
 }
 
-
 println("${TAG} libDir: ${libDir}")
+
+// Añadir compileSdkVersion si no existe
+android {
+  if (!android.hasProperty('compileSdkVersion')) {
+    compileSdkVersion = 33  // Cambia esta versión si necesitas otra
+    println("${TAG} compileSdkVersion no estaba definido. Se estableció por defecto a: ${compileSdkVersion}")
+  }
+}
 
 // Add custom maven url tslocationmanager.aar
 repositories {
@@ -110,16 +114,15 @@ repositories {
 println("$TAG playServicesLocationVersion: ${playServicesLocationVersion}")
 
 rootProject.allprojects {
-    repositories {
-        google()
-        mavenCentral()
-        maven { url 'https://developer.huawei.com/repo/' }
-    }
+  repositories {
+    google()
+    mavenCentral()
+    maven { url 'https://developer.huawei.com/repo/' }
+  }
 }
 
 dependencies {
   // Load tslocationmanager.aar
-
   def locationMajorVersion = playServicesLocationVersion.split('\\.')[0] as int
   if (locationMajorVersion >= 21) {
     api(group: 'com.transistorsoft', name:'tslocationmanager-v21', version: '+')
@@ -137,28 +140,26 @@ dependencies {
   def work_version = "2.8.1"
   implementation "androidx.work:work-runtime:$work_version"
   implementation "androidx.concurrent:concurrent-futures:1.1.0"
-
 }
 
 /**
 * Background Geolocation's aar includes about 1.5M of mp3 sound-files for its debugging sound FX.
 * This method strips those mp3s out in RELEASE builds.
 */
-
 def purgeBackgroundGeolocationDebugResources(applicationVariants) {
-    if ((ext.has("removeBackgroundGeolocationDebugSoundsInRelease")) && (ext.removeBackgroundGeolocationDebugSoundsInRelease == false)) return
+  if ((ext.has("removeBackgroundGeolocationDebugSoundsInRelease")) && (ext.removeBackgroundGeolocationDebugSoundsInRelease == false)) return
 
-    applicationVariants.all { variant ->
-        // Only Gradle v3.3.0 has this method.  Bail out for older versions of Cordova.
-        if (!variant.hasProperty('mergeResourcesProvider')) return
+  applicationVariants.all { variant ->
+    // Only Gradle v3.3.0 has this method.  Bail out for older versions of Cordova.
+    if (!variant.hasProperty('mergeResourcesProvider')) return
 
-        if (variant.buildType.name == "release") {
-            println("[cordova-background-geolocation] Purging debug resources in release build")
-            variant.mergeResourcesProvider.configure {
-                doLast {
-                    delete(fileTree(dir: outputDir, includes: ["raw_tslocationmanager*"]))
-                }
-            }
+    if (variant.buildType.name == "release") {
+      println("[cordova-background-geolocation] Purging debug resources in release build")
+      variant.mergeResourcesProvider.configure {
+        doLast {
+          delete(fileTree(dir: outputDir, includes: ["raw_tslocationmanager*"]))
         }
+      }
     }
+  }
 }
